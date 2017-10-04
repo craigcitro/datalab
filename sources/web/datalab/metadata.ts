@@ -48,8 +48,8 @@ const metadata: FakeMetadata = {
 
 function launchFakeServer(metadata: FakeMetadata): void {
   const port = 42926;
-  logging.getLogger().info('Starting fake metadata server at http://%s:%d with %s',
-                           host, port, JSON.stringify(metadata));
+  logging.getLogger().info('Starting fake metadata server at http://0.0.0.0:%d with %s',
+                           port, JSON.stringify(metadata));
 
   const server = http.createServer((req, res) => {
     const parsed_url = url.parse(req.url, true);
