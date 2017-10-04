@@ -47,8 +47,8 @@ const metadata: FakeMetadata = {
 };
 
 function launchFakeServer(metadata: FakeMetadata): void {
-  const port = 80;
-  const host = 'metadata.google.internal';
+  const port = 42926;
+  const host = 'localhost';
   logging.getLogger().info('Starting fake metadata server at http://%s:%d with %s',
                            host, port, JSON.stringify(metadata));
 
