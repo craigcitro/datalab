@@ -19,13 +19,14 @@
 # Otherwise, it will get the pydatalab by "git clone" from pydatalab repo.
 
 pushd $(pwd) >> /dev/null
-HERE=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)
+cd $(dirname "${BASH_SOURCE[0]}")
+HERE=${PWD}
 
 # Clean the build directory before building the image, so that the
 # prepare.sh script rebuilds web sources
 BUILD_DIR=../build
 rm -rf $BUILD_DIR
-"${HERE}"/../sources/build.sh
+../sources/build.sh
 
 function install_rsync() {
   echo "Installing rsync"
