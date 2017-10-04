@@ -36,7 +36,7 @@ interface FakeMetadata {
 
 const metadata: FakeMetadata = {
   project: "myproject",
-  project_number: 17,
+  project_number: "17",
   creds: {
     account: "thisguy",
     scopes: "",
