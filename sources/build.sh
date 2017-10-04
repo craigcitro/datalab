@@ -36,11 +36,6 @@ function install_bower() {
   npm install -g bower
 }
 
-function install_polyer_cli() {
-  echo "Installing Polymer CLI"
-  npm install -g polymer-cli
-}
-
 function install_typescript() {
   echo "Installing Typescript"
   npm install -g typescript
@@ -73,7 +68,6 @@ function install_prereqs() {
   tsc -h >/dev/null 2>&1  || install_typescript
   tslint -h >/dev/null 2>&1  || install_tslint
   bower -h >/dev/null 2>&1  || install_bower
-  polymer -h >/dev/null 2>&1  || install_polyer_cli
   source ./tools/initenv.sh
 }
 

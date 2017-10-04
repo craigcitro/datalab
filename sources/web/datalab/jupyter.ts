@@ -24,7 +24,6 @@ import crypto = require('crypto');
 import fs = require('fs');
 import http = require('http');
 import httpProxy = require('http-proxy');
-import idleTimeout = require('./idleTimeout');
 import logging = require('./logging');
 import net = require('net');
 import path = require('path');
@@ -88,18 +87,6 @@ function getNextJupyterPort(attempts: number, resolved: (port: number)=>void, fa
  * at same time.
  */
 var callbackManager: callbacks.CallbackManager = new callbacks.CallbackManager();
-
-/**
- * Templates
- */
-const templates: common.Map<string> = {
-  // These cached templates can be overridden in sendTemplate
-  'tree': fs.readFileSync(path.join(__dirname, 'templates', 'tree.html'), { encoding: 'utf8' }),
-  'terminals': fs.readFileSync(path.join(__dirname, 'templates', 'terminals.html'), { encoding: 'utf8' }),
-  'sessions': fs.readFileSync(path.join(__dirname, 'templates', 'sessions.html'), { encoding: 'utf8' }),
-  'edit': fs.readFileSync(path.join(__dirname, 'templates', 'edit.html'), { encoding: 'utf8' }),
-  'nb': fs.readFileSync(path.join(__dirname, 'templates', 'nb.html'), { encoding: 'utf8' })
-};
 
 /**
  * The application settings instance.
@@ -350,7 +337,6 @@ export function handleSocket(request: http.ServerRequest, socket: net.Socket, he
     return;
   }
   server.proxy.ws(request, socket, head);
-  idleTimeout.setupResetOnWebSocketRequests(socket);
 }
 
 export function handleRequest(request: http.ServerRequest, response: http.ServerResponse) {
@@ -361,13 +347,6 @@ export function handleRequest(request: http.ServerRequest, response: http.Server
     logging.getLogger().error('Jupyter server was not created yet for user %s.', userId);
     response.statusCode = 500;
     response.end();
-    return;
-  }
-
-  var path = url.parse(request.url).pathname;
-  if (path.indexOf('/sessions') == 0) {
-    var templateData: common.Map<string> = getBaseTemplateData(request);
-    sendTemplate('sessions', templateData, response);
     return;
   }
   server.proxy.web(request, response, null);
@@ -402,26 +381,6 @@ function getBaseTemplateData(request: http.ServerRequest): common.Map<string> {
   return templateData;
 }
 
-function sendTemplate(key: string, data: common.Map<string>, response: http.ServerResponse) {
-  let template = templates[key];
-
-  // Set this env var to point to source directory for live updates without restart.
-  const liveTemplatesDir = process.env.DATALAB_LIVE_TEMPLATES_DIR
-  if (liveTemplatesDir) {
-    template = fs.readFileSync(path.join(liveTemplatesDir, key + '.html'), { encoding: 'utf8' });
-  }
-
-  // Replace <%name%> placeholders with actual values.
-  // TODO: Error handling if template placeholders are out-of-sync with
-  //       keys in passed in data object.
-  const htmlContent = template.replace(/\<\%(\w+)\%\>/g, function(match, name) {
-    return data[name];
-  });
-
-  response.writeHead(200, { 'Content-Type': 'text/html' });
-  response.end(htmlContent);
-}
-
 function responseHandler(proxyResponse: http.ClientResponse,
                          request: http.ServerRequest, response: http.ServerResponse) {
   if (appSettings.allowOriginOverrides.length &&
@@ -437,46 +396,6 @@ function responseHandler(proxyResponse: http.ClientResponse,
 
   if (proxyResponse.statusCode != 200) {
     return;
-  }
-
-  // Set a cookie to provide information about the project and authenticated user to the client.
-  // Ensure this happens only for page requests, rather than for API requests.
-  var path = url.parse(request.url).pathname;
-  if ((path.indexOf('/tree') == 0) || (path.indexOf('/notebooks') == 0) ||
-      (path.indexOf('/edit') == 0) || (path.indexOf('/terminals') == 0)) {
-    var templateData: common.Map<string> = getBaseTemplateData(request);
-    var page: string = null;
-    if (path.indexOf('/tree') == 0) {
-      // stripping off the /tree/ from the path
-      templateData['notebookPath'] = path.substr(6);
-
-      page = 'tree';
-    } else if (path.indexOf('/edit') == 0) {
-      // stripping off the /edit/ from the path
-      templateData['filePath'] = path.substr(6);
-      templateData['fileName'] = path.substr(path.lastIndexOf('/') + 1);
-
-      page = 'edit';
-    } else if (path.indexOf('/terminals') == 0) {
-      templateData['terminalId'] = 'terminals/websocket/' + path.substr(path.lastIndexOf('/') + 1);
-      page = 'terminals';
-    } else {
-      // stripping off the /notebooks/ from the path
-      templateData['notebookPath'] = path.substr(11);
-      templateData['notebookName'] = path.substr(path.lastIndexOf('/') + 1);
-
-      page = 'nb';
-    }
-    sendTemplate(page, templateData, response);
-
-    // Suppress further writing to the response to prevent sending response
-    // from the notebook server. There is no way to communicate that, so hack around the
-    // limitation, by stubbing out all the relevant methods on the response with
-    // no-op methods.
-    response.setHeader = placeHolder;
-    response.writeHead = placeHolder;
-    response.write = placeHolder;
-    response.end = placeHolder;
   }
 }
 

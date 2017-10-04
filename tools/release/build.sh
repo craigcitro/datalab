@@ -29,56 +29,28 @@
 #  2. "LABEL_PREFIX": Adds a prefix to the image labels. This defaults
 #     to the empty string and is intended for things like feature builds.
 
-PROJECT_ID="${PROJECT_ID:-cloud-datalab}"
+PROJECT_ID="${PROJECT_ID:-colab-datalab}"
 TIMESTAMP=$(date +%Y%m%d)
 LABEL="${LABEL_PREFIX:-}${TIMESTAMP}"
-GATEWAY_IMAGE="gcr.io/${PROJECT_ID}/datalab-gateway:${LABEL}"
 DATALAB_IMAGE="gcr.io/${PROJECT_ID}/datalab:local-${LABEL}"
-DATALAB_GPU_IMAGE="gcr.io/${PROJECT_ID}/datalab-gpu:local-${LABEL}"
-CLI_TARBALL="datalab-cli-${LABEL}.tgz"
 
 pushd $(pwd) >> /dev/null
 BASE_DIR="$(cd $(dirname "${BASH_SOURCE[0]}")/../../ && pwd)"
 
 echo "Building the base image"
-cd "${BASE_DIR}/containers/base"
 
 DOCKER_BUILD_ARGS="--no-cache"
-./build.sh
-echo "Building the base GPU image"
-./build.gpu.sh
-
-echo "Building the gateway image ${GATEWAY_IMAGE}"
-cd "${BASE_DIR}/containers/gateway"
-./build.sh
-if ! $(docker tag -f datalab-gateway ${GATEWAY_IMAGE}); then
-  docker tag datalab-gateway ${GATEWAY_IMAGE}
-fi
-gcloud docker -- push ${GATEWAY_IMAGE}
 
 echo "Building the Datalab server"
 cd "${BASE_DIR}"
 ./sources/build.sh
 
 echo "Building the Datalab image ${DATALAB_IMAGE}"
-cd "${BASE_DIR}/containers/datalab"
+cd "${BASE_DIR}/containers"
 ./build.sh
 if ! $(docker tag -f datalab ${DATALAB_IMAGE}); then
   docker tag datalab ${DATALAB_IMAGE}
 fi
 gcloud docker -- push ${DATALAB_IMAGE}
-
-echo "Building the Datalab GPU image ${DATALAB_GPU_IMAGE}"
-cd "${BASE_DIR}/containers/datalab"
-./build.gpu.sh
-if ! $(docker tag -f datalab-gpu ${DATALAB_GPU_IMAGE}); then
-  docker tag datalab-gpu ${DATALAB_GPU_IMAGE}
-fi
-docker tag -f datalab-gpu ${DATALAB_GPU_IMAGE}
-gcloud docker -- push ${DATALAB_GPU_IMAGE}
-
-cd "${BASE_DIR}"
-tar -cvzf "/tmp/${CLI_TARBALL}" --transform 's,^tools/cli,datalab,' tools/cli
-gsutil cp "/tmp/${CLI_TARBALL}" "gs://${PROJECT_ID}/${CLI_TARBALL}"
 
 popd >> /dev/null

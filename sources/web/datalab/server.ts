@@ -23,8 +23,6 @@ import http = require('http');
 import info = require('./info');
 import jupyter = require('./jupyter');
 import logging = require('./logging');
-import idleTimeout = require('./idleTimeout');
-import fileSearch = require('./fileSearch');
 import metadata = require('./metadata');
 import net = require('net');
 import noCacheContent = require('./noCacheContent')
@@ -33,11 +31,9 @@ import request = require('request');
 import reverseProxy = require('./reverseProxy');
 import settings_ = require('./settings');
 import sockets = require('./sockets');
-import static_ = require('./static');
 import url = require('url');
 import userManager = require('./userManager');
 import wsHttpProxy = require('./wsHttpProxy');
-import backupUtility = require('./backupUtility');
 import childProcess = require('child_process');
 
 var server: http.Server;
@@ -45,9 +41,6 @@ var metadataHandler: http.RequestHandler;
 var healthHandler: http.RequestHandler;
 var infoHandler: http.RequestHandler;
 var settingHandler: http.RequestHandler;
-var staticHandler: http.RequestHandler;
-var fileSearchHandler: http.RequestHandler;
-var timeoutHandler: http.RequestHandler;
 
 /**
  * The application settings instance.
@@ -217,42 +210,15 @@ function handleRequest(request: http.ServerRequest,
     return;
   }
 
-  if (requestPath.indexOf('/_stopvm') == 0) {
-    stopVmHandler(request, response);
-    return;
-  }
-
   // /_usersettings updates a per-user setting.
   if (requestPath.indexOf('/_usersettings') == 0) {
     settingHandler(request, response);
     return;
   }
 
-  // file search capability
-  if (requestPath.indexOf('/_filesearch') === 0) {
-    fileSearchHandler(request, response);
-    return;
-  }
-
-  // idle timeout management
-  if (requestPath.indexOf('/_timeout') === 0) {
-    timeoutHandler(request, response);
-    return;
-  }
-
   // Not Found
   response.statusCode = 404;
   response.end();
-}
-
-/**
- * Returns true iff the supplied path should be handled by the static handler
- */
-function isStaticResource(urlpath: string) {
-  // /static and /custom paths for returning static content
-  return urlpath.indexOf('/custom') == 0 ||
-         urlpath.indexOf('/static') == 0 ||
-         static_.isExperimentalResource(urlpath);
 }
 
 /**
@@ -279,8 +245,6 @@ function uncheckedRequestHandler(request: http.ServerRequest, response: http.Ser
     auth.handleAuthFlow(request, response, parsed_url, appSettings);
   } else if (reverseProxyPort) {
     reverseProxy.handleRequest(request, response, reverseProxyPort);
-  } else if (isStaticResource(urlpath)) {
-    staticHandler(request, response);
   } else {
     handleRequest(request, response, urlpath);
   }
@@ -288,22 +252,6 @@ function uncheckedRequestHandler(request: http.ServerRequest, response: http.Ser
 
 // The path that is used for the optional websocket proxy for HTTP requests.
 const httpOverWebSocketPath: string = '/http_over_websocket';
-
-function stopVmHandler(request: http.ServerRequest, response: http.ServerResponse) {
-  if ('POST' != request.method) {
-    return;
-  }
-  try {
-    let vminfo = info.getVmInfo();
-    childProcess.execSync(
-      'gcloud compute instances stop ' + vminfo.vm_name +
-         ' --project ' + vminfo.vm_project + ' --zone ' + vminfo.vm_zone,
-      {env: process.env});
-  } catch (err) {
-    logging.getLogger().error(err, 'Failed to stop the VM. stderr: %s', err.stderr);
-    return "unknown";
-  }
-}
 
 function socketHandler(request: http.ServerRequest, socket: net.Socket, head: Buffer) {
   request.url = trimBasePath(request.url);
@@ -331,7 +279,6 @@ function trimBasePath(requestPath: string): string {
  */
 function requestHandler(request: http.ServerRequest, response: http.ServerResponse) {
   request.url = trimBasePath(request.url);
-  idleTimeout.resetBasedOnPath(request.url);
   try {
     uncheckedRequestHandler(request, response);
   } catch (e) {
@@ -357,9 +304,6 @@ export function run(settings: common.AppSettings): void {
   healthHandler = health.createHandler(settings);
   infoHandler = info.createHandler(settings);
   settingHandler = settings_.createHandler();
-  staticHandler = static_.createHandler(settings);
-  fileSearchHandler = fileSearch.createHandler(appSettings);
-  timeoutHandler = idleTimeout.createHandler();
 
   server = http.createServer(requestHandler);
   server.on('upgrade', socketHandler);
@@ -371,10 +315,8 @@ export function run(settings: common.AppSettings): void {
   logging.getLogger().info('Starting DataLab server at http://localhost:%d%s',
                            settings.serverPort,
                            settings.datalabBasePath);
-  backupUtility.startBackup(settings);
   process.on('SIGINT', () => process.exit());
 
-  idleTimeout.initAndStart();
   server.listen(settings.serverPort);
 }
 

@@ -35,10 +35,10 @@ interface FakeMetadata {
 }
 
 const metadata: FakeMetadata = {
-  project: process.env.PROJECT_ID,
-  project_number: process.env.PROJECT_NUMBER,
+  project: "myproject",
+  project_number: 17,
   creds: {
-    account: process.env.DATALAB_GIT_AUTHOR,
+    account: "thisguy",
     scopes: "",
     access_token: "",
     expires_in: 0,

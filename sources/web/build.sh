@@ -41,18 +41,6 @@ WEB_DIR=$BUILD_DIR/web/nb
 
 mkdir -p $WEB_DIR
 
-# Experimental UI build step
-cd datalab/polymer
-npm run build
-if [[ $DEBUG == 1 ]]; then
-  rsync -avpq ./build/polymer_unbundled/ ../static/experimental
-else
-echo "Using bundled polymer resources.."
-  rsync -avpq ./build/polymer_bundled/ ../static/experimental
-fi
-cd ../..
-# End experimental UI build step
-
 # Compile the nodejs server
 tsc --module commonjs --noImplicitAny \
     --outDir $WEB_DIR \
@@ -60,6 +48,4 @@ tsc --module commonjs --noImplicitAny \
     ./datalab/*.ts
 
 rsync -avpq ./datalab/config/ $WEB_DIR/config
-rsync -avpq ./datalab/static/ $WEB_DIR/static
-rsync -avpq ./datalab/templates/ $WEB_DIR/templates
 rsync -avpq ./datalab/package.json $WEB_DIR/package.json

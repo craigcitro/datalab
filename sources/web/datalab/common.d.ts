@@ -17,8 +17,6 @@ declare module common {
   interface UserSettings {
     startuppath: string,
     theme: string,
-    idleTimeoutShutdownCommand: string,
-    idleTimeoutInterval: string,
     oauth2ClientId: string,
     [index: string]: string,
   }
@@ -158,29 +156,12 @@ declare module common {
      * Number of weekly GCS backups of the user's content dir to keep
      */
     numWeeklyBackups: number;
-
-    /**
-     * The idle timeout interval, such as "2h 30m".
-     */
-    idleTimeoutInterval: string;
-
-    /**
-     * The shutdown command to use after an idle timeout.
-     */
-    idleTimeoutShutdownCommand: string;
-
-    /**
-     * List of supported sources for the file browser.
-     * Possible options are: jupyter, drive, sharedDrive, docs, and bigquery
-     */
-    supportedFileBrowserSources: string[];
   }
 
   interface TimeoutInfo {
     enabled: boolean;
     expirationTime: number;
     secondsRemaining: number;
-    idleTimeoutSeconds: number;
   }
 
   interface Map<T> {
