@@ -164,14 +164,13 @@ ADD content/ /datalab
 
 # Install the build artifacts
 RUN cd /datalab/web && /tools/node/bin/npm install && \
-    mv /datalab/.bashrc /root/.bashrc && \
     cd /
 
 # Startup
-ENV ENV /root/.bashrc
 ENV SHELL /bin/bash
-ENV ENABLE_USAGE_REPORTING true
 ENV CLOUDSDK_CONFIG /content/datalab/.config
+ENV GCE_METADATA_ROOT localhost:42926
+ENV GCE_METADATA_IP 127.0.0.1:42926
 
 # Startup
 ENTRYPOINT [ "/datalab/run.sh" ]

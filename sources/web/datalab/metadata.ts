@@ -35,14 +35,14 @@ interface FakeMetadata {
 }
 
 const metadata: FakeMetadata = {
-  project: "myproject",
-  project_number: "17",
+  project: "notaproject",
+  project_number: "0",
   creds: {
-    account: "thisguy",
+    account: "",
     scopes: "",
     access_token: "",
     expires_in: 0,
-    token_type: "Bearer",
+    token_type: "",
   },
 };
 
@@ -67,7 +67,8 @@ function launchFakeServer(metadata: FakeMetadata): void {
       res.writeHead(200, { 'Metadata-Flavor': 'Google', 'Content-Type': 'application/text' });
       res.write('default/\n');
       res.write(metadata.creds.account + '/\n');
-    } else if (urlpath == '/computeMetadata/v1/instance/service-accounts/default/' &&
+    } else if ((urlpath == '/computeMetadata/v1/instance/service-accounts/default/' ||
+                urlpath == '/computeMetadata/v1/instance/service-accounts/' + metadata.creds.account + '/') &&
                (parsed_url.query['recursive'] || '').toLowerCase() == "true") {
       const accountJSON: any = {
         aliases: ["default"],

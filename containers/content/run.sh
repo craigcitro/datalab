@@ -24,14 +24,7 @@
 # build script for those files, after which the changes will get noticed by
 # the notebook server and it will automatically restart.
 
-[ -n "${EXTERNAL_PORT}" ] || EXTERNAL_PORT=8081
-USAGE='USAGE:
-
-    docker run -it -p "EXTERNAL_PORT:8080" -v "${HOME}:/content" gcr.io/cloud-datalab/datalab:local
-
-where EXTERNAL_PORT can be 8080, 8081 etc.
-'
-
+EXTERNAL_PORT=${EXTERNAL_PORT:-8081}
 ERR_TMP_NOT_WRITABLE=2
 
 check_tmp_directory() {
@@ -51,12 +44,6 @@ check_tmp_directory
 # Make sure the notebooks directory exists
 mkdir -p /content/datalab/notebooks
 
-# Fetch docs and tutorials. This should not abort startup if it fails
-{
-(cd /content/datalab; git clone -n --single-branch https://github.com/googledatalab/notebooks.git docs)
-(cd /content/datalab/docs; git config core.sparsecheckout true; echo $'intro/\nsamples/\ntutorials/\n*.ipynb\n' > .git/info/sparse-checkout; git checkout master)
-} || echo "Fetching tutorials and samples failed."
-
 # Create the notebook notary secret if one does not already exist
 if [ ! -f /content/datalab/.config/notary_secret ]
 then
@@ -70,12 +57,7 @@ EMPTY_BRACES="{}"
 DATALAB_BASE_PATH=$(echo ${DATALAB_SETTINGS_OVERRIDES:-$EMPTY_BRACES} | python -c "import sys,json; print(json.load(sys.stdin).get('datalabBasePath',''))")
 
 # Start the DataLab server
-FOREVER_CMD="forever --minUptime 1000 --spinSleepTime 1000"
-if [ -z "${DATALAB_DEBUG}" ]
-then
-  echo "Starting Datalab in silent mode, for debug output, rerun with an additional '-e DATALAB_DEBUG=true' argument"
-  FOREVER_CMD="${FOREVER_CMD} -s"
-fi
+FOREVER_CMD="forever --minUptime 1000 --spinSleepTime 1000 -s"
 
 if [ -d /devroot ]; then
   # For development purposes, if the user has mapped a /devroot dir, use it.
